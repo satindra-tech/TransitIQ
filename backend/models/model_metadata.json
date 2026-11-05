@@ -1,0 +1,72 @@
+{
+  "algorithm": "Random Forest Regressor (Ensemble Trees)",
+  "n_estimators": 120,
+  "max_depth": 16,
+  "train_samples": 9621,
+  "test_samples": 2406,
+  "r2_score": 0.7425,
+  "accuracy_pct": 74.25,
+  "mae": 19.48,
+  "rmse": 28.49,
+  "feature_importances": [
+    {
+      "feature": "Historical Demand Baseline",
+      "importance": 65.06
+    },
+    {
+      "feature": "Scheduled Buses",
+      "importance": 14.88
+    },
+    {
+      "feature": "Service Type",
+      "importance": 5.21
+    },
+    {
+      "feature": "Route ID",
+      "importance": 4.57
+    },
+    {
+      "feature": "Hour of Day",
+      "importance": 3.14
+    },
+    {
+      "feature": "Day of Week",
+      "importance": 2.68
+    },
+    {
+      "feature": "Corridor Zone",
+      "importance": 1.81
+    },
+    {
+      "feature": "Traffic Congestion Index",
+      "importance": 1.71
+    },
+    {
+      "feature": "Peak Hour Flag",
+      "importance": 0.51
+    },
+    {
+      "feature": "Weekend Flag",
+      "importance": 0.42
+    }
+  ],
+  "total_routes_trained": 261,
+  "known_corridors": [
+    "Anna Salai Arterial",
+    "Central Urban Arterial",
+    "GST Road Corridor",
+    "Inner Ring Road (100ft)",
+    "North Chennai Coastal",
+    "OMR IT Expressway",
+    "Poonamallee High Road"
+  ],
+  "known_services": [
+    "A/C",
+    "A/C EV",
+    "Deluxe",
+    "Deluxe EV",
+    "Express",
+    "Ordinary",
+    "Small Bus Express"
+  ]
+}
