@@ -71,6 +71,12 @@ class RecommendationStatusUpdate(BaseModel):
 class GoogleMapsKeyUpdate(BaseModel):
     api_key: str
 
+class PassengerWaitSignal(BaseModel):
+    route_num: str
+    stop_name: str
+    pax_count: int = 1
+    passenger_name: Optional[str] = "Passenger"
+
 SETTINGS_FILE = os.path.join(DATA_DIR, "system_settings.json")
 
 def get_settings():
@@ -172,6 +178,40 @@ def get_passenger_routes(
         "results_count": len(results),
         "routes": results
     }
+
+@app.get("/api/passenger/live-signals")
+def get_passenger_live_signals():
+    """Live passenger stop waiting telemetry signals sent to Bus Operator Dashboard"""
+    signals = fleet_manager.get_waiting_signals()
+    total_waiting = sum(s.get("pax_count", 1) for s in signals if s.get("status") == "WAITING_STRANDED")
+    return {
+        "total_active_signals": len(signals),
+        "total_passengers_waiting": total_waiting,
+        "signals": signals
+    }
+
+@app.post("/api/passenger/waiting-signal")
+def submit_passenger_waiting_signal(body: PassengerWaitSignal):
+    """Passenger signals operator dashboard that they are waiting at a specific stop"""
+    sig = fleet_manager.add_waiting_signal(
+        route_num=body.route_num,
+        stop_name=body.stop_name,
+        pax_count=body.pax_count,
+        passenger_name=body.passenger_name
+    )
+    return {
+        "status": "success",
+        "message": f"Signal received: Operator alerted that {body.pax_count} passenger(s) are waiting for Route {body.route_num} at {body.stop_name}.",
+        "signal": sig
+    }
+
+@app.post("/api/passenger/live-signals/{signal_id}/resolve")
+def resolve_passenger_waiting_signal(signal_id: str):
+    """Operator acknowledges or dispatches relief for waiting passenger signal"""
+    sig = fleet_manager.resolve_waiting_signal(signal_id)
+    if not sig:
+        raise HTTPException(status_code=404, detail="Signal not found")
+    return {"status": "success", "message": "Signal acknowledged by Dispatcher", "signal": sig}
 
 @app.get("/api/live-operations/fleet-schedule")
 def get_live_fleet_schedule(

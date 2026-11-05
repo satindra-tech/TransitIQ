@@ -20,8 +20,73 @@ class FleetManager:
         self.buses = []
         self.alerts = []
         self.recommendation_states = {}
+        self.waiting_signals = [
+            {
+                "signal_id": "SIG-101",
+                "route_num": "570",
+                "stop_name": "Sholinganallur (OMR)",
+                "corridor": "OMR IT Expressway",
+                "pax_count": 8,
+                "wait_minutes": 14,
+                "passenger_name": "IT Commuter Group",
+                "bus_delay_min": 12.5,
+                "timestamp": "Just now",
+                "status": "WAITING_STRANDED"
+            },
+            {
+                "signal_id": "SIG-102",
+                "route_num": "21G",
+                "stop_name": "Guindy Kathipara",
+                "corridor": "GST Road Corridor",
+                "pax_count": 5,
+                "wait_minutes": 9,
+                "passenger_name": "Suburban Commuter",
+                "bus_delay_min": 8.0,
+                "timestamp": "2 mins ago",
+                "status": "WAITING_STRANDED"
+            },
+            {
+                "signal_id": "SIG-103",
+                "route_num": "5A",
+                "stop_name": "Madhya Kailash",
+                "corridor": "Anna Salai Arterial",
+                "pax_count": 4,
+                "wait_minutes": 11,
+                "passenger_name": "College Student",
+                "bus_delay_min": 15.0,
+                "timestamp": "4 mins ago",
+                "status": "WAITING_STRANDED"
+            }
+        ]
         self.init_fleet()
         self.init_alerts()
+
+    def add_waiting_signal(self, route_num, stop_name, pax_count=1, passenger_name="Passenger"):
+        sig_id = f"SIG-{len(self.waiting_signals) + 101}"
+        new_sig = {
+            "signal_id": sig_id,
+            "route_num": str(route_num).upper().strip(),
+            "stop_name": stop_name,
+            "corridor": "Chennai Corridor",
+            "pax_count": max(1, int(pax_count)),
+            "wait_minutes": 1,
+            "passenger_name": passenger_name or "Passenger",
+            "bus_delay_min": random.choice([8.5, 11.0, 14.0, 17.5]),
+            "timestamp": "Just now",
+            "status": "WAITING_STRANDED"
+        }
+        self.waiting_signals.insert(0, new_sig)
+        return new_sig
+
+    def get_waiting_signals(self):
+        return self.waiting_signals
+
+    def resolve_waiting_signal(self, signal_id):
+        for s in self.waiting_signals:
+            if s["signal_id"] == signal_id:
+                s["status"] = "DISPATCH_NOTIFIED"
+                return s
+        return None
 
     def init_fleet(self):
         """Generates realistic Chennai MTC active and standby fleet registry"""

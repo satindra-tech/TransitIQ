@@ -1,15 +1,20 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Bus, 
   MapPin, 
   TrendingUp, 
   AlertTriangle, 
   Sparkles, 
-  ArrowRight,
-  ShieldAlert,
-  Clock,
-  Layers,
-  ArrowUpRight
+  ArrowRight, 
+  ShieldAlert, 
+  Clock, 
+  Layers, 
+  ArrowUpRight,
+  Radio,
+  Users,
+  CheckCircle2,
+  Check,
+  Zap
 } from 'lucide-react';
 import { 
   ResponsiveContainer, 
@@ -33,6 +38,27 @@ export default function MainDashboardTab({
   onNavigateTab,
   onStartDemoStory
 }) {
+  const [waitingSignals, setWaitingSignals] = useState([]);
+  const [resolvedSignals, setResolvedSignals] = useState({});
+
+  useEffect(() => {
+    fetch('/api/passenger/live-signals')
+      .then(r => r.json())
+      .then(d => {
+        setWaitingSignals(d.signals || []);
+      })
+      .catch(err => console.error(err));
+  }, [hour, dayOfWeek]);
+
+  const handleResolveSignal = async (sigId) => {
+    try {
+      await fetch(`/api/passenger/live-signals/${sigId}/resolve`, { method: 'POST' });
+      setResolvedSignals(prev => ({ ...prev, [sigId]: true }));
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
   if (!data) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
@@ -156,7 +182,101 @@ export default function MainDashboardTab({
         </div>
       </div>
 
-      {/* 3. Demand Trend Chart & Critical Alerts Panel */}
+      {/* 3. Real-Time Curbside Passenger Wait Telemetry (Signals from Passenger App) */}
+      <div className="bg-white dark:bg-slate-900 border-2 border-rose-200 dark:border-rose-900/50 rounded-2xl p-6 shadow-sm space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <div className="p-3 rounded-2xl bg-rose-50 dark:bg-rose-950/60 text-rose-600 dark:text-rose-400">
+              <Radio className="w-5 h-5 animate-pulse" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h3 className="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-wider">
+                  Live Curbside Passenger Wait Telemetry
+                </h3>
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-100 text-rose-800 dark:bg-rose-950/80 dark:text-rose-200 border border-rose-300 dark:border-rose-800 flex items-center gap-1">
+                  <span className="w-2 h-2 rounded-full bg-rose-500 animate-ping"></span>
+                  From Passenger App
+                </span>
+              </div>
+              <p className="text-xs text-slate-500 dark:text-slate-400">
+                Real-time signals transmitted by passengers waiting at Chennai bus stops along delayed corridors
+              </p>
+            </div>
+          </div>
+
+          <div className="text-xs text-slate-500 font-mono">
+            Total Waiting: <strong className="text-rose-600 text-sm font-black">{waitingSignals.reduce((acc, s) => acc + (s.pax_count || 1), 0)} Commuters</strong> across {waitingSignals.length} stops
+          </div>
+        </div>
+
+        {/* Signals Cards Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+          {waitingSignals.map((sig, i) => {
+            const isResolved = resolvedSignals[sig.signal_id] || sig.status === 'DISPATCH_NOTIFIED';
+
+            return (
+              <div 
+                key={i}
+                className="p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/60 flex flex-col justify-between space-y-3"
+              >
+                <div>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <span className="font-mono font-black text-xs px-2 py-0.5 rounded-lg bg-teal-50 text-teal-700 dark:bg-teal-950/60 dark:text-teal-300 border border-teal-200 dark:border-teal-800">
+                      Route {sig.route_num}
+                    </span>
+                    <span className="text-[10px] font-mono text-slate-400">
+                      {sig.timestamp}
+                    </span>
+                  </div>
+
+                  <div className="flex items-center gap-1 text-slate-900 dark:text-white font-bold text-xs mb-1">
+                    <MapPin className="w-3.5 h-3.5 text-rose-500 shrink-0" />
+                    <span>{sig.stop_name}</span>
+                  </div>
+
+                  <div className="text-[11px] text-slate-600 dark:text-slate-300 flex items-center gap-1.5">
+                    <Users className="w-3.5 h-3.5 text-teal-600" />
+                    <strong>{sig.pax_count} passengers waiting</strong>
+                    <span className="text-slate-400 font-mono">({sig.wait_minutes}m elapsed)</span>
+                  </div>
+
+                  <div className="mt-2 p-2 rounded-lg bg-rose-50/80 dark:bg-rose-950/30 border border-rose-100 dark:border-rose-900/40 text-[10px] text-rose-700 dark:text-rose-300 flex justify-between items-center font-mono">
+                    <span>Incoming Bus Delay:</span>
+                    <strong className="text-xs">+{sig.bus_delay_min} mins</strong>
+                  </div>
+                </div>
+
+                <div className="pt-2 border-t border-slate-200 dark:border-slate-700 flex items-center justify-between gap-2">
+                  {isResolved ? (
+                    <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
+                      <CheckCircle2 className="w-3.5 h-3.5" /> Driver Notified
+                    </span>
+                  ) : (
+                    <button
+                      onClick={() => handleResolveSignal(sig.signal_id)}
+                      className="w-full py-1.5 rounded-lg bg-teal-600 hover:bg-teal-500 text-white text-[11px] font-bold transition flex items-center justify-center gap-1.5 shadow-xs"
+                    >
+                      <Zap className="w-3 h-3" />
+                      <span>Notify Bus &amp; Expedite</span>
+                    </button>
+                  )}
+
+                  <button
+                    onClick={() => onNavigateTab('bus-allocation')}
+                    className="text-[11px] text-slate-500 hover:text-teal-600 font-semibold underline shrink-0"
+                    title="Allocate standby bus from nearby depot"
+                  >
+                    Dispatch Bus
+                  </button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* 4. Demand Trend Chart & Critical Alerts Panel */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Demand Trend Chart (Corridors) */}
         <div className="lg:col-span-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-xs flex flex-col justify-between">
@@ -246,7 +366,7 @@ export default function MainDashboardTab({
         </div>
       </div>
 
-      {/* 4. Recommended Actions Section */}
+      {/* 5. Recommended Actions Section */}
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm">
         <div className="flex items-center justify-between mb-4">
           <div>
