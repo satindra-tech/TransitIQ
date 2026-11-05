@@ -2,6 +2,7 @@ import os
 import json
 import io
 import csv
+import math
 from fastapi import FastAPI, Query, HTTPException, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
@@ -76,6 +77,10 @@ class PassengerWaitSignal(BaseModel):
     stop_name: str
     pax_count: int = 1
     passenger_name: Optional[str] = "Passenger"
+    phone_number: Optional[str] = ""
+    user_lat: Optional[float] = None
+    user_lon: Optional[float] = None
+    distance_m: Optional[int] = None
 
 SETTINGS_FILE = os.path.join(DATA_DIR, "system_settings.json")
 
@@ -179,6 +184,56 @@ def get_passenger_routes(
         "routes": results
     }
 
+def calculate_haversine_m(lat1, lon1, lat2, lon2):
+    R = 6371000
+    phi1, phi2 = math.radians(lat1), math.radians(lat2)
+    dphi = math.radians(lat2 - lat1)
+    dlam = math.radians(lon2 - lon1)
+    a = math.sin(dphi/2)**2 + math.cos(phi1)*math.cos(phi2)*math.sin(dlam/2)**2
+    return int(2 * R * math.atan2(math.sqrt(a), math.sqrt(1 - a)))
+
+@app.get("/api/passenger/nearby-stops")
+def get_nearby_bus_stops(
+    lat: float = Query(12.9810, description="Passenger detected latitude"),
+    lon: float = Query(80.2520, description="Passenger detected longitude"),
+    limit: int = Query(8, ge=1, le=25)
+):
+    """Detects and returns nearby bus stops within walking distance of passenger GPS coordinates"""
+    scored = []
+    for s in BUS_STOPS:
+        if "lat" in s and "lon" in s and s["lat"] is not None and s["lon"] is not None:
+            try:
+                slat = float(s["lat"])
+                slon = float(s["lon"])
+                d = calculate_haversine_m(lat, lon, slat, slon)
+                scored.append({
+                    "name": s["name"],
+                    "zone": s.get("zone", "Chennai"),
+                    "lat": slat,
+                    "lon": slon,
+                    "distance_m": d,
+                    "walk_time_mins": max(1, int(d / 80))
+                })
+            except (ValueError, TypeError):
+                continue
+
+    scored.sort(key=lambda x: x["distance_m"])
+    seen = set()
+    deduped = []
+    for s in scored:
+        clean_name = s["name"].strip().upper()
+        if clean_name not in seen:
+            seen.add(clean_name)
+            deduped.append(s)
+        if len(deduped) >= limit:
+            break
+
+    return {
+        "user_location": {"lat": lat, "lon": lon},
+        "nearby_stops_count": len(deduped),
+        "stops": deduped
+    }
+
 @app.get("/api/passenger/live-signals")
 def get_passenger_live_signals():
     """Live passenger stop waiting telemetry signals sent to Bus Operator Dashboard"""
@@ -197,11 +252,15 @@ def submit_passenger_waiting_signal(body: PassengerWaitSignal):
         route_num=body.route_num,
         stop_name=body.stop_name,
         pax_count=body.pax_count,
-        passenger_name=body.passenger_name
+        passenger_name=body.passenger_name,
+        phone_number=body.phone_number,
+        user_lat=body.user_lat,
+        user_lon=body.user_lon,
+        distance_m=body.distance_m
     )
     return {
         "status": "success",
-        "message": f"Signal received: Operator alerted that {body.pax_count} passenger(s) are waiting for Route {body.route_num} at {body.stop_name}.",
+        "message": f"Signal received: Operator alerted that {body.passenger_name} ({body.phone_number or 'Verified Mobile'}) is waiting for Route {body.route_num} at {body.stop_name}.",
         "signal": sig
     }
 

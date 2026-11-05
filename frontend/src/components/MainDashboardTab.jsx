@@ -230,14 +230,30 @@ export default function MainDashboardTab({
                     </span>
                   </div>
 
+                  <div className="flex items-center justify-between text-[11px] text-slate-600 dark:text-slate-300 mb-1">
+                    <span className="font-semibold text-slate-800 dark:text-slate-200">
+                      {sig.passenger_name || 'Verified Commuter'}
+                    </span>
+                    {sig.phone_number && (
+                      <span className="font-mono text-[10px] text-slate-500 bg-slate-100 dark:bg-slate-700 px-1.5 py-0.5 rounded">
+                        📱 {sig.phone_number}
+                      </span>
+                    )}
+                  </div>
+
                   <div className="flex items-center gap-1 text-slate-900 dark:text-white font-bold text-xs mb-1">
                     <MapPin className="w-3.5 h-3.5 text-rose-500 shrink-0" />
-                    <span>{sig.stop_name}</span>
+                    <span className="truncate">{sig.stop_name}</span>
+                    {sig.distance_m && (
+                      <span className="text-[10px] text-teal-600 font-normal font-mono shrink-0">
+                        ({sig.distance_m}m)
+                      </span>
+                    )}
                   </div>
 
                   <div className="text-[11px] text-slate-600 dark:text-slate-300 flex items-center gap-1.5">
                     <Users className="w-3.5 h-3.5 text-teal-600" />
-                    <strong>{sig.pax_count} passengers waiting</strong>
+                    <strong>{sig.pax_count} passenger(s) waiting</strong>
                     <span className="text-slate-400 font-mono">({sig.wait_minutes}m elapsed)</span>
                   </div>
 

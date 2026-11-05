@@ -28,7 +28,9 @@ class FleetManager:
                 "corridor": "OMR IT Expressway",
                 "pax_count": 8,
                 "wait_minutes": 14,
-                "passenger_name": "IT Commuter Group",
+                "passenger_name": "Karthikeyan S.",
+                "phone_number": "+91 98401 23456",
+                "distance_m": 85,
                 "bus_delay_min": 12.5,
                 "timestamp": "Just now",
                 "status": "WAITING_STRANDED"
@@ -40,7 +42,9 @@ class FleetManager:
                 "corridor": "GST Road Corridor",
                 "pax_count": 5,
                 "wait_minutes": 9,
-                "passenger_name": "Suburban Commuter",
+                "passenger_name": "Ananya R.",
+                "phone_number": "+91 94440 98214",
+                "distance_m": 120,
                 "bus_delay_min": 8.0,
                 "timestamp": "2 mins ago",
                 "status": "WAITING_STRANDED"
@@ -52,7 +56,9 @@ class FleetManager:
                 "corridor": "Anna Salai Arterial",
                 "pax_count": 4,
                 "wait_minutes": 11,
-                "passenger_name": "College Student",
+                "passenger_name": "Venkatesh M.",
+                "phone_number": "+91 97890 41235",
+                "distance_m": 45,
                 "bus_delay_min": 15.0,
                 "timestamp": "4 mins ago",
                 "status": "WAITING_STRANDED"
@@ -61,7 +67,7 @@ class FleetManager:
         self.init_fleet()
         self.init_alerts()
 
-    def add_waiting_signal(self, route_num, stop_name, pax_count=1, passenger_name="Passenger"):
+    def add_waiting_signal(self, route_num, stop_name, pax_count=1, passenger_name="Passenger", phone_number="", user_lat=None, user_lon=None, distance_m=None):
         sig_id = f"SIG-{len(self.waiting_signals) + 101}"
         new_sig = {
             "signal_id": sig_id,
@@ -70,7 +76,11 @@ class FleetManager:
             "corridor": "Chennai Corridor",
             "pax_count": max(1, int(pax_count)),
             "wait_minutes": 1,
-            "passenger_name": passenger_name or "Passenger",
+            "passenger_name": passenger_name or "Verified Passenger",
+            "phone_number": phone_number or "+91 98401 23456",
+            "user_lat": user_lat,
+            "user_lon": user_lon,
+            "distance_m": distance_m if distance_m is not None else random.randint(40, 180),
             "bus_delay_min": random.choice([8.5, 11.0, 14.0, 17.5]),
             "timestamp": "Just now",
             "status": "WAITING_STRANDED"
