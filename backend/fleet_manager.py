@@ -20,83 +20,8 @@ class FleetManager:
         self.buses = []
         self.alerts = []
         self.recommendation_states = {}
-        self.waiting_signals = [
-            {
-                "signal_id": "SIG-101",
-                "route_num": "570",
-                "stop_name": "Sholinganallur (OMR)",
-                "corridor": "OMR IT Expressway",
-                "pax_count": 8,
-                "wait_minutes": 14,
-                "passenger_name": "Karthikeyan S.",
-                "phone_number": "+91 98401 23456",
-                "distance_m": 85,
-                "bus_delay_min": 12.5,
-                "timestamp": "Just now",
-                "status": "WAITING_STRANDED"
-            },
-            {
-                "signal_id": "SIG-102",
-                "route_num": "21G",
-                "stop_name": "Guindy Kathipara",
-                "corridor": "GST Road Corridor",
-                "pax_count": 5,
-                "wait_minutes": 9,
-                "passenger_name": "Ananya R.",
-                "phone_number": "+91 94440 98214",
-                "distance_m": 120,
-                "bus_delay_min": 8.0,
-                "timestamp": "2 mins ago",
-                "status": "WAITING_STRANDED"
-            },
-            {
-                "signal_id": "SIG-103",
-                "route_num": "5A",
-                "stop_name": "Madhya Kailash",
-                "corridor": "Anna Salai Arterial",
-                "pax_count": 4,
-                "wait_minutes": 11,
-                "passenger_name": "Venkatesh M.",
-                "phone_number": "+91 97890 41235",
-                "distance_m": 45,
-                "bus_delay_min": 15.0,
-                "timestamp": "4 mins ago",
-                "status": "WAITING_STRANDED"
-            }
-        ]
         self.init_fleet()
         self.init_alerts()
-
-    def add_waiting_signal(self, route_num, stop_name, pax_count=1, passenger_name="Passenger", phone_number="", user_lat=None, user_lon=None, distance_m=None):
-        sig_id = f"SIG-{len(self.waiting_signals) + 101}"
-        new_sig = {
-            "signal_id": sig_id,
-            "route_num": str(route_num).upper().strip(),
-            "stop_name": stop_name,
-            "corridor": "Chennai Corridor",
-            "pax_count": max(1, int(pax_count)),
-            "wait_minutes": 1,
-            "passenger_name": passenger_name or "Verified Passenger",
-            "phone_number": phone_number or "+91 98401 23456",
-            "user_lat": user_lat,
-            "user_lon": user_lon,
-            "distance_m": distance_m if distance_m is not None else random.randint(40, 180),
-            "bus_delay_min": random.choice([8.5, 11.0, 14.0, 17.5]),
-            "timestamp": "Just now",
-            "status": "WAITING_STRANDED"
-        }
-        self.waiting_signals.insert(0, new_sig)
-        return new_sig
-
-    def get_waiting_signals(self):
-        return self.waiting_signals
-
-    def resolve_waiting_signal(self, signal_id):
-        for s in self.waiting_signals:
-            if s["signal_id"] == signal_id:
-                s["status"] = "DISPATCH_NOTIFIED"
-                return s
-        return None
 
     def init_fleet(self):
         """Generates realistic Chennai MTC active and standby fleet registry"""
@@ -322,37 +247,53 @@ class FleetManager:
     def search_passenger_routes(self, origin=None, destination=None, route_query=None, route_evaluations=[]):
         """Feature 11: Passenger Information Interface query"""
         results = []
-        eval_map = {r["route_num"]: r for r in route_evaluations}
+        q = (route_query or "").upper().strip()
         
-        for r in route_evaluations[:40]:
-            rnum = r["route_num"]
-            orig = r["origin"]
-            dest = r["destination"]
+        # Friendly aliases for common Chennai transit queries
+        q_tokens = [q] if q else []
+        if "CENTRAL" in q:
+            q_tokens.extend(["BROADWAY", "CENTRAL", "PARK TOWN", "MMC"])
+        elif "AIRPORT" in q:
+            q_tokens.extend(["MEENAMBAKKAM", "PALLAVARAM", "AIRPORT"])
+        
+        for r in route_evaluations:
+            rnum = r.get("route_num", "")
+            orig = r.get("origin", "")
+            dest = r.get("destination", "")
+            corridor = r.get("corridor", "")
             
-            # Simple match
-            q = (route_query or "").upper().strip()
-            if q and (q not in rnum and q not in orig.upper() and q not in dest.upper()):
-                continue
+            # Multi-field match
+            if q_tokens:
+                matched = False
+                for token in q_tokens:
+                    if (token in rnum.upper() or 
+                        token in orig.upper() or 
+                        token in dest.upper() or 
+                        token in corridor.upper()):
+                        matched = True
+                        break
+                if not matched:
+                    continue
                 
-            load = r["load_ratio"]
+            load = r.get("load_ratio", 0.75)
             crowd_level = "LOW" if load < 0.75 else ("MODERATE" if load < 1.0 else ("HIGH" if load < 1.3 else "CRITICAL"))
             
             # Simulated next arrival time (4 to 18 mins)
             eta_mins = random.randint(4, 18)
-            status = "DELAYED" if r["estimated_delay_min"] >= 10 else "ON TIME"
+            status = "DELAYED" if r.get("estimated_delay_min", 0) >= 10 else "ON TIME"
             
             results.append({
                 "route_num": rnum,
-                "corridor": r["corridor"],
+                "corridor": corridor,
                 "origin": orig,
                 "destination": dest,
                 "eta_mins": eta_mins,
                 "crowd_status": crowd_level,
                 "crowd_badge_color": "green" if crowd_level == "LOW" else ("blue" if crowd_level == "MODERATE" else ("amber" if crowd_level == "HIGH" else "red")),
                 "service_status": status,
-                "delay_mins": r["estimated_delay_min"],
+                "delay_mins": r.get("estimated_delay_min", 0),
                 "capacity_utilization": round(load * 100, 1),
-                "scheduled_buses": r["scheduled_buses"],
+                "scheduled_buses": r.get("scheduled_buses", 2),
                 "alternative_less_crowded_route": "48C" if rnum == "570" else ("29C" if rnum == "23C" else None)
             })
             

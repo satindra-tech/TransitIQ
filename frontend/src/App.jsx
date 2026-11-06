@@ -101,7 +101,6 @@ export default function App() {
           alertsCount={overviewData?.critical_overcrowded_count || 0}
           onRefresh={fetchOverview}
           loading={loading}
-          onNavigateTab={setCurrentTab}
         />
 
         {/* Dynamic Tab Body */}
